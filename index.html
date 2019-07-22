@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="bootstrap/css/bootstrap.min.css">
+	<!-- <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script> -->
+	<style type="text/css">
+		table{
+			width: 100%;
+		}
+		table button.btn.btn-danger{
+			position: relative;
+    		top: -8px;
+    		float: right;
+		}
+
+	</style>
+</head>
+<body onload="run()">
+	<div class="container">
+		<div class="row">
+	        <div class="col-xs-12 col-sm-12 col-md-12">
+	            <table id="tableValue">
+	            	<tbody></tbody>
+	            </table>
+	        </div>
+	    </div>
+	    <div class="row">
+	        <div class="col-auto mr-auto">
+	            <button class="btn btn-info" onclick="clickApply()">Apply</button>
+	            <button class="btn btn-warning" onclick="clickClear()">Clear</button>
+	        </div>
+	        <div class="col-auto">
+	            <button class="btn btn-success" onclick="clickAddRule()">Add Rule</button>
+	        </div>
+	    </div>
+
+	    <div class="row">
+	        <div class="col-xs-12 col-sm-12 col-md-12" id="view">
+	          
+	        </div>
+	    </div>
+	</div>
+
+
+<script type="text/javascript">
+
+	var filedArray = ['size', 'forks', 'stars', 'followers'];
+	var operatorArray = ['<', '>=', '==']
+	
+	function run(){ // перший запуск 
+
+		clickAddRule();
+	
+	}
+
+	function clickAddRule(){ // додати строку
+
+		var tbody = document.querySelector('#tableValue tbody');
+
+		var newTr = document.createElement('tr');
+		newTr.innerHTML = contentHtml();
+
+		tbody.appendChild(newTr);
+	
+	}
+	
+	function clickApply(){ // відправити на сервер
+
+		var arr = []; 
+
+		document.querySelector('#view').innerHTML = '';
+
+		var tables = document.querySelectorAll('#tableValue tbody tr');
+		if(tables.length != 0){
+			[].forEach.call(tables, function(table) {
+					
+				var inFiled = table.querySelector('.f-filed').value;
+				var inOperator = table.querySelector('.f-operator').value;
+				var inValue = table.querySelector('.f-value').value;
+
+				arr.push({
+					filed:filedArray[parseInt(inFiled)],
+					operator:operatorArray[parseInt(inOperator)],
+					value:inValue
+				});
+			});
+
+			console.log(arr);
+
+			for(let i = 0; i<arr.length; i++){
+				var xhr = new XMLHttpRequest();
+				xhr.open('POST', 'ajax.php', true);
+				xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+				// xhr.setRequestHeader('Content-Type', 'multipart/form-data; boundary=' + boundary);
+
+				xhr.onreadystatechange = function() {
+				if (this.readyState != 4) return;
+
+				  // alert( this.responseText );
+				  console.log(JSON.parse(this.responseText));
+
+				  dataRepositories(JSON.parse(this.responseText));
+				}
+
+				xhr.send('name='+JSON.stringify([arr[i]]));
+			}
+
+		}
+	}
+	
+	function clickClear(){ // все видалили строки
+
+		document.querySelector('#view').innerHTML = '';
+
+		var elements = document.querySelectorAll('#tableValue tbody tr');
+		[].forEach.call(elements, function(element) {
+			element.parentNode.removeChild(element);
+		});
+
+		clickAddRule();
+	
+	}
+	
+	function clickDeleteRow(event){ // видалити строку
+
+		event = event || window.event;
+    	event = event.target || event.srcElement;
+
+		var trr = document.querySelector('#'+event.id);
+		var getTrr = trr.closest('tr');
+		getTrr.parentNode.removeChild(getTrr);
+	
+	}
+
+	function contentHtml(){ // контекст
+		var outFiled = '';
+		var outOperator= '';
+
+		[].forEach.call(filedArray, function(name, id) {
+			outFiled += '<option value="'+id+'">'+name+'</option>';
+		});
+		[].forEach.call(operatorArray, function(name, id) {
+			outOperator += '<option value="'+id+'">'+name+'</option>';
+		});
+
+		var html = '		<td>'+
+		            '			<div class="form-group">'+
+					'			    <select class="form-control f-filed" >'+
+					'					<option value="-1" disabled selected hidden>Filed</option>'+
+					outFiled+
+					'			    </select>'+
+					'			</div>'+
+		            '		</td>'+
+		            '		<td>'+
+		            '			<div class="form-group">'+
+					'			    <select class="form-control f-operator" >'+
+					'					<option value="-1" disabled selected hidden>Operator</option>'+
+					outOperator+
+					'			    </select>'+
+					'			</div>'+
+		            '		</td>'+
+		            '		<td>'+
+		            '			<div class="form-group">'+
+					'			    <input type="text" class="form-control f-value" placeholder="Value" onkeypress="return validateNumber(event)">'+
+					'			</div>'+
+		            '		</td>'+
+		            '		<td>'+
+		            '		<button class="btn btn-danger" id="del'+(Math.floor(Math.random() * 10000) + 1)+'" onclick="clickDeleteRow()">Delete</button>'+
+		            '		</td>';
+		return html;
+	}
+
+	function validateNumber(event) {
+
+	   var charCode = (event.which) ? event.which : event.keyCode
+	   if (charCode > 31 && (charCode < 48 || charCode > 57))
+	      return false;
+
+	   return true;
+	};
+
+
+	function dataRepositories(data){
+
+		var view = document.querySelector('#view');
+
+		var h1 = document.createElement('p');
+		h1.innerHTML = '<h1>'+data.F_FILED+'</h1><small>'+data.F_URL+'</small>';
+
+		view.appendChild(h1);
+
+
+		var addTr = '';
+		if(data.items.length != 0){
+			[].forEach.call(data.items, function(item) {
+				addTr += '<tr><td>'+item.id+'</td><td>'+item.name+'</td><td>'+item.full_name+'</td></tr>';
+			});
+		}
+
+
+		var table = document.createElement('table');
+		table.className = 'table table-bordered';
+		table.innerHTML = '<thead>'+
+						'<th>Id</th><th>Name</th><th>Full name</th>'+
+						'</thead>'+
+						'<tbody>'+addTr+'</tbody>';
+
+		view.appendChild(table);
+
+
+
+	}
+
+	// Element.prototype.append = function(){
+
+	// }
+
+</script>
+</body>
+</html>
